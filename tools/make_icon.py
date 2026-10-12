@@ -60,13 +60,43 @@ def draw_icon(size: int) -> Image.Image:
     return img
 
 
+def save_ico(img: Image.Image, path: Path, sizes: list[int]) -> None:
+    """Write an all-PNG-entry ICO.
+
+    Pillow's default ICO writer stores small sizes as BMP frames with a bogus
+    AND-mask, so Windows (Explorer, taskbar, Alt+Tab) renders them *without*
+    the dark background - only the 256px PNG entry looked right. PNG entries
+    carry their own alpha and are rendered correctly at every size.
+    """
+    import io
+    import struct
+
+    blobs: list[bytes] = []
+    for s in sizes:
+        frame = img if s == img.width else img.resize((s, s), Image.LANCZOS)
+        buf = io.BytesIO()
+        frame.save(buf, "PNG")
+        blobs.append(buf.getvalue())
+
+    count = len(blobs)
+    header = struct.pack("<HHH", 0, 1, count)  # reserved, type=icon, count
+    offset = 6 + 16 * count
+    directory = b""
+    for s, blob in zip(sizes, blobs):
+        dim = 0 if s >= 256 else s  # 0 means 256 in ICO directory
+        directory += struct.pack(
+            "<BBBBHHII", dim, dim, 0, 0, 1, 32, len(blob), offset
+        )
+        offset += len(blob)
+    path.write_bytes(header + directory + b"".join(blobs))
+
+
 def main() -> None:
     OUT.mkdir(exist_ok=True)
     base = draw_icon(256)
     base.save(OUT / "icon.png")
-    sizes = [16, 24, 32, 48, 64, 128, 256]
-    base.save(OUT / "icon.ico", sizes=[(s, s) for s in sizes])
-    print(f"wrote {OUT / 'icon.png'} and {OUT / 'icon.ico'}")
+    save_ico(base, OUT / "icon.ico", [16, 24, 32, 48, 64, 128, 256])
+    print(f"wrote {OUT / 'icon.png'} and {OUT / 'icon.ico'} (all-PNG entries)")
 
 
 if __name__ == "__main__":

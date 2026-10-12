@@ -30,3 +30,9 @@ Initial public release.
 - Offline pytest suite (52 tests) + ruff lint config + CI workflow.
 - Portable Windows executables: PyInstaller specs (`packaging/`), one-command
   build (`tools/build_exe.ps1`), SHA256 checksums, published on GitHub Releases.
+
+### Fixed
+
+- Windows application icon (Explorer, taskbar, Alt+Tab) now renders the dark
+  brand design at every size — the ICO uses all-PNG entries because Pillow's
+  BMP frames lost the background in shell views.
