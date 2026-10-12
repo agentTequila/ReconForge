@@ -37,8 +37,8 @@ dependencies = [
 dev = ["pytest>=8.0.0", "ruff>=0.4.0", "responses>=0.25.0"]
 
 [project.urls]
-Homepage = "https://github.com/ReconForge/ReconForge"
-Issues = "https://github.com/ReconForge/ReconForge/issues"
+Homepage = "https://github.com/agentTequila/ReconForge"
+Issues = "https://github.com/agentTequila/ReconForge/issues"
 
 [project.scripts]
 reconforge = "reconforge.cli:main"

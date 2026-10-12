@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ReconForge/ReconForge/actions"><img src="https://github.com/ReconForge/ReconForge/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/agentTequila/ReconForge/actions"><img src="https://github.com/agentTequila/ReconForge/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey" alt="Cross-platform">
@@ -53,7 +53,7 @@ links** so no investigation path is a dead end.
 ## Install
 
 ```bash
-git clone https://github.com/ReconForge/ReconForge.git
+git clone https://github.com/agentTequila/ReconForge.git
 cd ReconForge
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e .
