@@ -122,11 +122,22 @@ def _write_key_file(path: Path, text: str) -> None:
 
 
 def ensure_key_file(directory: Path | None = None) -> Path:
-    """Return the project key file, creating the template on first run."""
+    """Return the project key file, creating the template on first run.
+
+    Falls back to the global key file if the directory is not writable
+    (e.g. an installed location like Program Files).
+    """
     directory = directory or Path.cwd()
     key_file = directory / KEY_FILE_NAME
     if not key_file.exists():
-        _write_key_file(key_file, _TEMPLATE)
+        try:
+            _write_key_file(key_file, _TEMPLATE)
+        except OSError:
+            fallback = global_key_file()
+            fallback.parent.mkdir(parents=True, exist_ok=True)
+            if not fallback.exists():
+                _write_key_file(fallback, _TEMPLATE)
+            return fallback
     return key_file
 
 

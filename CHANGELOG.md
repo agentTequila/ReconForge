@@ -27,4 +27,6 @@ Initial public release.
   `summary.txt`.
 - Proxy support (`--proxy socks5h://127.0.0.1:9050`), response cache,
   HTTPS everywhere in generated links.
-- Offline pytest suite (49 tests) + ruff lint config + CI workflow.
+- Offline pytest suite (52 tests) + ruff lint config + CI workflow.
+- Portable Windows executables: PyInstaller specs (`packaging/`), one-command
+  build (`tools/build_exe.ps1`), SHA256 checksums, published on GitHub Releases.

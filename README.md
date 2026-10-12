@@ -140,14 +140,27 @@ Every scan writes `reconforge_output/<target>_<timestamp>/`:
 - `report.html` — self-contained dark-theme report, safe to share
 - `summary.txt` — short digest
 
-## Windows executable (optional)
+## Downloads (Windows)
 
-```bash
-pip install pyinstaller
-pyinstaller --onefile --windowed --icon assets/icon.ico --name ReconForge gui_entry.py
+Portable builds ship on the
+[Releases](https://github.com/agentTequila/ReconForge/releases) page:
+
+| Asset | What it is |
+|-------|------------|
+| `ReconForge-v*-win64.exe` | GUI — download and double-click, no installer |
+| `reconforge-cli-v*-win64.exe` | the full CLI in one file |
+| `SHA256SUMS.txt` | verify your download (`Get-FileHash -Algorithm SHA256`) |
+
+Portable means no installer: `.apikeys` and `reconforge_output\` are created
+**next to the exe** (it runs fine from a USB stick). Windows SmartScreen may
+flag unsigned executables — that's normal for open-source builds; verify the
+SHA-256 against `SHA256SUMS.txt` and run it yourself.
+
+Prefer building from source? It's one command:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/build_exe.ps1
 ```
-
-(See `docs/building.md` if present, or use `python -m reconforge.gui` directly.)
 
 ## Architecture
 

@@ -20,7 +20,16 @@ from reconforge.core import config, registry
 from reconforge.core.engine import ScanResult
 from reconforge.core.target import TARGET_KINDS, TargetError, detect_kind, parse_target
 
-ASSETS = Path(__file__).resolve().parent / "assets"
+
+def _find_assets_dir() -> Path:
+    """Assets live in the package when frozen, at the repo root in source runs."""
+    pkg = Path(__file__).resolve().parent / "assets"
+    if pkg.exists():
+        return pkg
+    return Path(__file__).resolve().parents[2] / "assets"
+
+
+ASSETS = _find_assets_dir()
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
