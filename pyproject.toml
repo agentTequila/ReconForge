@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reconforge"
+version = "0.1.0"
+description = "Cross-platform OSINT reconnaissance toolkit: modular core, rich CLI, CustomTkinter GUI, BYOK AI analysis."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "ReconForge Contributors" }]
+requires-python = ">=3.10"
+keywords = ["osint", "recon", "security", "reconnaissance", "footprinting"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Environment :: X11 Applications",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+]
+dependencies = [
+    "requests>=2.31.0",
+    "dnspython>=2.4.0",
+    "python-whois>=0.9.0",
+    "click>=8.1.0",
+    "rich>=13.7.0",
+    "customtkinter>=5.2.0",
+    "phonenumbers>=8.13.0",
+    "pyfiglet>=0.8.post1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "ruff>=0.4.0", "responses>=0.25.0"]
+
+[project.urls]
+Homepage = "https://github.com/ReconForge/ReconForge"
+Issues = "https://github.com/ReconForge/ReconForge/issues"
+
+[project.scripts]
+reconforge = "reconforge.cli:main"
+reconforge-gui = "reconforge.gui:main"
+
+[tool.setuptools.packages.find]
+include = ["reconforge*"]
+
+[tool.setuptools.package-data]
+reconforge = ["data/*.json", "data/*.txt"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["osint_recon.py", ".venv", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["network: tests that require live network access"]
