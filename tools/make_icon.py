@@ -82,7 +82,7 @@ def save_ico(img: Image.Image, path: Path, sizes: list[int]) -> None:
     header = struct.pack("<HHH", 0, 1, count)  # reserved, type=icon, count
     offset = 6 + 16 * count
     directory = b""
-    for s, blob in zip(sizes, blobs):
+    for s, blob in zip(sizes, blobs, strict=True):
         dim = 0 if s >= 256 else s  # 0 means 256 in ICO directory
         directory += struct.pack(
             "<BBBBHHII", dim, dim, 0, 0, 1, 32, len(blob), offset

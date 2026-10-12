@@ -6,12 +6,13 @@ Launch: ``reconforge-gui`` or ``python -m reconforge.gui``.
 from __future__ import annotations
 
 import json
+import os
 import queue
 import subprocess
 import sys
 import threading
 from pathlib import Path
-from tkinter import messagebox, ttk
+from tkinter import PhotoImage, messagebox, ttk
 
 import customtkinter as ctk
 
@@ -19,6 +20,7 @@ from reconforge import __version__
 from reconforge.core import config, registry
 from reconforge.core.engine import ScanResult
 from reconforge.core.target import TARGET_KINDS, TargetError, detect_kind, parse_target
+from reconforge.core.verbose import flavor_for
 
 
 def _find_assets_dir() -> Path:
@@ -35,13 +37,50 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 
+def _icon_log(msg: str) -> None:
+    """Append to %TEMP%\\reconforge_icon_debug.log (icon diagnostics)."""
+    try:
+        log = Path(os.environ.get("TEMP", ".")) / "reconforge_icon_debug.log"
+        with log.open("a", encoding="utf-8") as fh:
+            fh.write(msg + "\n")
+    except OSError:
+        pass
+
+
 def _window_icon(window) -> None:
-    ico = ASSETS / "icon.ico"
-    if ico.exists() and sys.platform == "win32":
-        try:
-            window.iconbitmap(str(ico))
-        except Exception:
-            pass
+    """Apply the brand icon to title bar AND taskbar.
+
+    The Windows taskbar honours the window's raster icon (set via
+    ``iconphoto``); ``iconbitmap`` alone can silently fail or set a NULL
+    small-icon, leaving Tk's default feather. Order: iconbitmap first,
+    iconphoto last so the raster icon has the final word. Applied again
+    shortly after mapping because the taskbar samples the icon at first
+    paint.
+    """
+    if sys.platform != "win32":
+        return
+
+    def apply() -> None:
+        ico = ASSETS / "icon.ico"
+        png = ASSETS / "icon.png"
+        _icon_log(f"apply: ico={ico} exists={ico.exists()} png={png} exists={png.exists()}")
+        if ico.exists():
+            try:
+                window.iconbitmap(str(ico))
+                _icon_log("iconbitmap: OK")
+            except Exception as exc:  # noqa: BLE001 - diagnostics must never crash
+                _icon_log(f"iconbitmap FAILED: {exc!r}")
+        if png.exists():
+            try:
+                img = PhotoImage(file=str(png))
+                window.iconphoto(True, img)
+                window._reconforge_icon_ref = img  # keep GC from dropping it
+                _icon_log("iconphoto: OK")
+            except Exception as exc:  # noqa: BLE001 - diagnostics must never crash
+                _icon_log(f"iconphoto FAILED: {exc!r}")
+
+    apply()
+    window.after(300, apply)
 
 
 class ReconForgeApp(ctk.CTk):
@@ -351,14 +390,24 @@ class ReconForgeApp(ctk.CTk):
     def _handle_event(self, event: dict) -> None:
         etype = event.get("type")
         data = event.get("data", {})
-        if etype == "module_started":
-            self.module_total = max(self.module_total, self.module_done + 1)
-            self.status_label.configure(text=f"Running {data.get('module_id')}...")
+        if etype == "scan_started":
+            self.module_total = int(data.get("total_modules") or 0)
+            self.module_done = 0
+            self.progress.set(0)
+            self.status_label.configure(
+                text=f"0/{self.module_total} modules · {flavor_for('scan.start')}")
+        elif etype == "module_started":
+            current = self.module_done + 1
+            self.status_label.configure(
+                text=f"{current}/{self.module_total} · "
+                     f"{flavor_for(data.get('module_id', ''))}")
             self.log_write(f"> {data.get('module_id')}")
         elif etype == "module_finished":
             self.module_done += 1
             if self.module_total:
                 self.progress.set(self.module_done / max(self.module_total, 1))
+            self.status_label.configure(
+                text=f"{self.module_done}/{self.module_total} · collating evidence")
             status = data.get("status", "?")
             style = {"ok": "+", "skipped": "~", "error": "x", "timeout": "x"}.get(status, "?")
             self.log_write(f"  {style} {status} ({data.get('duration_s', 0):.1f}s)"

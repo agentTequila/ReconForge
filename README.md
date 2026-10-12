@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>OSINT reconnaissance, forged into one toolkit.</b><br>
-  40 modules · 64+ platforms · 6 target types · rich CLI + GUI · bring-your-own-key AI
+  44 modules · 64+ platforms · 6 target types · rich CLI + GUI · bring-your-own-key AI
 </p>
 
 <p align="center">
@@ -30,6 +30,8 @@
   Both work everywhere; both share identical scan logic.
 - **Safe by default** — passive profile out of the box; active modules require
   an explicit flag/confirmation.
+- **It feels alive** — every scan shows a live progress bar with flavor text
+  ("sifting through certificate ashes...") in both frontends.
 - **Keys optional** — every key-less module runs with zero configuration.
   API keys unlock extras; the AI features accept *your own* keys (BYOK), or run
   fully local via [Ollama](https://ollama.com).
@@ -40,12 +42,12 @@
 
 | Target type | What you get |
 |-------------|--------------|
-| **Domain** | WHOIS, DNS, subdomains (crt.sh + wordlist), TLS certs, tech fingerprint, security headers, robots.txt, Wayback history, Google dorks, Shodan & VirusTotal (key), port scan / directory discovery / HTTP methods (active) |
+| **Domain** | WHOIS, DNS, subdomains (crt.sh + wordlist + HackerTarget), TLS certs, tech fingerprint, security headers, robots.txt, Wayback history, Google dorks, urlscan.io, Shodan & VirusTotal (key), port scan / directory discovery / HTTP methods (active) |
 | **Email** | HIBP breach history (key), EmailRep reputation (key), MX checks, Gravatar profiles, naming-pattern analysis, social/breach search links, SMTP mailbox verify (active) |
 | **Phone** | Region/carrier/line-type parsing, NumVerify lookup (key), caller-lookup & social URLs |
 | **Person** | Social search (15 platforms), people-search engines, professional/academic networks, breach indexes, username-variant generator |
 | **Username** | Live account checks across **64+ platforms** (GitHub, X, TikTok, Steam, Reddit, …) with per-site detection logic |
-| **IP** | RDAP (org, abuse contact), geo/ASN, reverse DNS, Shodan & VirusTotal (key), threat-intel links |
+| **IP** | RDAP (org, abuse contact), geo/ASN, BGP announcements, reverse DNS, Shodan & VirusTotal (key), nmap service/version detection (active, needs `nmap`), threat-intel links |
 
 Every module that can't run automatically still emits **ready-to-open OSINT
 links** so no investigation path is a dead end.

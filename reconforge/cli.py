@@ -12,11 +12,13 @@ from pathlib import Path
 import click
 from rich.console import Console
 from rich.panel import Panel
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
 from rich.text import Text
 
 from reconforge import __version__
 from reconforge.core import config, registry
+from reconforge.core.verbose import flavor_for
 
 console = Console()
 
@@ -202,20 +204,42 @@ def scan(ctx: click.Context, target: str, target_type: str | None, profile: str,
         )
 
     events = EventBus()
+    progress = Progress(
+        SpinnerColumn(spinner_name="dots"),
+        TextColumn("[bold]{task.description}"),
+        BarColumn(bar_width=28, complete_style="green", finished_style="green"),
+        TextColumn("[cyan]{task.completed}/{task.total}[/]"),
+        TimeElapsedColumn(),
+        console=console,
+    )
+    task_id: int | None = None
 
     def _listener(event):  # noqa: ANN001
+        nonlocal task_id
         if event.type == "log":
             style = {"info": "dim", "success": "green", "warn": "yellow"}.get(
                 event.data.get("level"), "dim")
-            console.print(f"    [{style}]{event.data['message']}[/]")
+            progress.console.print(f"    [{style}]{event.data['message']}[/]")
+        elif event.type == "scan_started":
+            total = int(event.data.get("total_modules") or 0)
+            task_id = progress.add_task(flavor_for("scan.start"), total=total)
         elif event.type == "module_started":
-            console.print(f"[cyan]>[/cyan] {event.data['module_id']} ", end="")
+            mid = event.data["module_id"]
+            if task_id is not None:
+                progress.update(task_id, description=flavor_for(mid))
+            progress.console.print(f"[dim]{mid}[/dim]")
         elif event.type == "module_finished":
             status = event.data["status"]
             style = {"ok": "green", "skipped": "yellow"}.get(status, "red")
-            console.print(
-                f"[{style}]{status}[/{style}] {event.data['duration_s']:.1f}s"
+            mark = {"ok": "+", "skipped": "~"}.get(status, "x")
+            extra = (f" [red]{event.data['error']}[/red]"
+                     if event.data.get("error") else "")
+            progress.console.print(
+                f"  [{style}]{mark} {status}[/{style}] "
+                f"{event.data['duration_s']:.1f}s{extra}"
             )
+            if task_id is not None:
+                progress.advance(task_id)
 
     events.subscribe(_listener)
 
@@ -228,13 +252,17 @@ def scan(ctx: click.Context, target: str, target_type: str | None, profile: str,
         redact=redact,
         yes=yes,
     )
-    result = engine.run_scan(
-        parsed,
-        scan_ctx,
-        profile=profile,
-        include_ids=include.split(",") if include else None,
-        exclude_ids=exclude.split(",") if exclude else None,
-    )
+    progress.start()
+    try:
+        result = engine.run_scan(
+            parsed,
+            scan_ctx,
+            profile=profile,
+            include_ids=include.split(",") if include else None,
+            exclude_ids=exclude.split(",") if exclude else None,
+        )
+    finally:
+        progress.stop()
 
     if ai_enabled:
         _run_ai(result, scan_ctx, provider, redact)

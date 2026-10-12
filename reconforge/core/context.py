@@ -9,11 +9,12 @@ from typing import Any
 
 import requests
 
+from reconforge import __version__
 from reconforge.core.cache import ResponseCache
 from reconforge.core.events import EventBus
 from reconforge.core.ratelimit import TokenBucket
 
-USER_AGENT = "ReconForge/0.1.0 (+https://github.com/ReconForge/ReconForge)"
+USER_AGENT = f"ReconForge/{__version__} (+https://github.com/agentTequila/ReconForge)"
 
 
 @dataclass

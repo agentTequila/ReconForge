@@ -151,3 +151,116 @@ def virustotal_lookup(target: Target, ctx: ScanContext):
 )
 def ip_links(target: Target, ctx: ScanContext):
     return {"links": {name: tpl.format(ip=target.value) for name, tpl in LINKS.items()}}, []
+
+
+def parse_nmap_output(text: str) -> list[dict]:
+    """Parse ``nmap -sV`` normal-output lines into service records."""
+    import re
+
+    services: list[dict] = []
+    for line in text.splitlines():
+        match = re.match(
+            r"^(\d+)/(tcp|udp)\s+(open\S*)\s+(\S+)\s*(.*)$", line.strip()
+        )
+        if match:
+            services.append({
+                "port": int(match.group(1)),
+                "proto": match.group(2),
+                "state": match.group(3),
+                "service": match.group(4),
+                "version": (match.group(5) or "").strip(),
+            })
+    return services
+
+
+RISKY_SERVICE_HINTS = {
+    21: "FTP - use SFTP/SCP instead",
+    22: "SSH - ensure key-only auth and no root password logins",
+    23: "Telnet - plaintext protocol, replace with SSH",
+    3389: "RDP - brute-force surface, restrict behind VPN",
+    445: "SMB - frequent ransomware entry point",
+    1433: "MSSQL - verify it is not internet-exposed",
+    3306: "MySQL - verify it is not internet-exposed",
+    5432: "PostgreSQL - verify it is not internet-exposed",
+    5900: "VNC - ensure strong auth or bind to localhost",
+    6379: "Redis - unauthenticated Redis is a classic compromise vector",
+    9200: "Elasticsearch - verify auth is enabled",
+    27017: "MongoDB - unauthenticated MongoDB is a classic compromise vector",
+}
+
+
+@register_module(
+    id="ip.nmap",
+    target_kinds=["ip", "domain"],
+    profile="active",
+    description="Nmap service/version detection on top ports (requires nmap installed)",
+)
+def nmap_scan(target: Target, ctx: ScanContext):
+    import shutil
+    import subprocess
+
+    from reconforge.core.engine import skip
+
+    if not shutil.which("nmap"):
+        skip("nmap binary not found - install Nmap (https://nmap.org) and retry")
+
+    cmd = [
+        "nmap", "-Pn", "-sV", "--top-ports", "100", "-T4", "--max-retries", "1",
+        "-oN", "-", target.value,
+    ]
+    ctx.log(f"running: {' '.join(cmd)}")
+    proc = subprocess.run(
+        cmd, capture_output=True, text=True,
+        timeout=min(ctx.module_timeout, 300), errors="replace",
+    )
+    services = parse_nmap_output(proc.stdout)
+    risky = [
+        {"port": s["port"], "note": RISKY_SERVICE_HINTS[s["port"]]}
+        for s in services if s["port"] in RISKY_SERVICE_HINTS
+    ]
+    findings = []
+    if services:
+        findings.append(
+            f"nmap: {len(services)} open port(s) with service details"
+        )
+    for item in risky:
+        findings.append(f"Port {item['port']}: {item['note']}")
+    return {
+        "target": target.value,
+        "open_services": services,
+        "risky": risky,
+        "exit_code": proc.returncode,
+    }, findings
+
+
+@register_module(
+    id="ip.bgp",
+    target_kinds=["ip"],
+    profile="passive",
+    description="BGP announcements for the IP (ASN, prefix, owning organization)",
+)
+def bgp_lookup(target: Target, ctx: ScanContext):
+    resp = ctx.http("GET", f"https://api.bgpview.io/ip/{target.value}", timeout=20)
+    if resp.status_code != 200:
+        return {"found": False, "http_status": resp.status_code}, []
+    payload = resp.json().get("data", {})
+    asns = payload.get("asns", [])
+    prefixes = payload.get("prefixes", [])
+    first = asns[0] if asns else {}
+    result = {
+        "asn": first.get("asn"),
+        "name": first.get("name"),
+        "description": first.get("description"),
+        "country_code": first.get("country_code"),
+        "prefixes": [
+            {"prefix": p.get("prefix"), "asn": p.get("asn")}
+            for p in prefixes[:10]
+        ],
+    }
+    findings = []
+    if first.get("description"):
+        findings.append(
+            f"IP announced by AS{first.get('asn')} "
+            f"({first.get('description')})"
+        )
+    return result, findings

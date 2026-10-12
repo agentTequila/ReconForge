@@ -26,6 +26,7 @@ for f in (ROOT / "reconforge" / "data").rglob("*"):
     if f.is_file():
         datas.append((str(f), "reconforge/data"))
 datas.append((str(ROOT / "assets" / "icon.ico"), "reconforge/assets"))
+datas.append((str(ROOT / "assets" / "icon.png"), "reconforge/assets"))
 
 # in-function imports PyInstaller's static analysis can miss
 hiddenimports += ["phonenumbers", "whois", "dns.resolver", "dns.message"]

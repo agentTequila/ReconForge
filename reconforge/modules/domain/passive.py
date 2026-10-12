@@ -396,3 +396,78 @@ def osint_links(target: Target, ctx: ScanContext):
         "HuntIntel": "https://intelligencehunter.com/",
     }
     return {"links": links}, []
+
+
+@register_module(
+    id="domain.urlscan",
+    target_kinds=["domain"],
+    profile="passive",
+    description="urlscan.io crowd-sourced page scans of the domain",
+)
+def urlscan_search(target: Target, ctx: ScanContext):
+    resp = ctx.http(
+        "GET", "https://urlscan.io/api/v1/search/",
+        params={"q": f"domain:{target.value}", "size": 50},
+        timeout=30,
+    )
+    if resp.status_code != 200:
+        return {"found": False, "http_status": resp.status_code}, []
+    try:
+        payload = resp.json()
+    except ValueError:
+        return {"found": False, "http_status": resp.status_code}, []
+    results = payload.get("results", []) or []
+    total = payload.get("total", len(results))
+    seen = []
+    for entry in results:
+        page = entry.get("page") or {}
+        seen.append({
+            "url": page.get("url"),
+            "domain": page.get("domain"),
+            "ip": page.get("ip"),
+            "time": (entry.get("task") or {}).get("time"),
+        })
+    findings = []
+    if total:
+        findings.append(f"urlscan.io has {total} scan result(s) for this domain")
+    interesting = [s for s in seen if s["domain"] and s["domain"] != target.value]
+    if interesting:
+        uniq = sorted({s["domain"] for s in interesting})
+        findings.append(
+            f"Scans also touched {len(uniq)} other domain(s): {', '.join(uniq[:5])}"
+        )
+    return {"total": total, "recent": seen[:20]}, findings
+
+
+@register_module(
+    id="domain.hackertarget",
+    target_kinds=["domain"],
+    profile="passive",
+    description="HackerTarget hostsearch: subdomains + IPs (free tier)",
+)
+def hackertarget_hostsearch(target: Target, ctx: ScanContext):
+    resp = ctx.http(
+        "GET", "https://api.hackertarget.com/hostsearch/",
+        params={"q": target.value}, timeout=30,
+    )
+    text = resp.text.strip()
+    if resp.status_code != 200 or not text:
+        return {"found": False, "http_status": resp.status_code}, []
+    if text.lower().startswith("error"):
+        # free tier limits / invalid host - not a crash
+        return {"found": False, "api_message": text.splitlines()[0]}, []
+
+    hosts: list[dict] = []
+    for line in text.splitlines():
+        if "," not in line:
+            continue
+        host, _, ip = line.partition(",")
+        host = host.strip().lower()
+        if host.endswith(target.value):
+            hosts.append({"host": host, "ip": ip.strip()})
+    findings = []
+    if len(hosts) >= 10:
+        findings.append(
+            f"HackerTarget returned {len(hosts)} subdomains - large attack surface"
+        )
+    return {"count": len(hosts), "hosts": hosts[:200]}, findings
