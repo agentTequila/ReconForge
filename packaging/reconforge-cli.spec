@@ -28,6 +28,20 @@ for f in (ROOT / "reconforge" / "data").rglob("*"):
 # in-function imports PyInstaller's static analysis can miss
 hiddenimports += ["phonenumbers", "whois", "dns.resolver", "dns.message"]
 
+# whois reads its public-suffix list at runtime; bundle it or the module fails
+# inside a frozen build with a FileNotFoundError.
+try:
+    import whois
+
+    _whois_root = Path(whois.__file__).resolve().parent
+    for _f in _whois_root.rglob("*"):
+        if _f.is_file() and _f.suffix != ".py" and "__pycache__" not in _f.parts:
+            datas.append(
+                (str(_f), str(Path("whois") / _f.relative_to(_whois_root).parent))
+            )
+except ImportError:
+    pass
+
 a = Analysis(
     [str(ROOT / "cli_entry.py")],
     pathex=[str(ROOT)],

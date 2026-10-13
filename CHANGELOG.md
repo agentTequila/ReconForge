@@ -3,6 +3,29 @@
 All notable changes to ReconForge are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.1] - 2026-10-13
+
+Fixes and polish. v0.2.0 shipped a progress bar that silently never rendered;
+this release makes scan progress real and adds proper key management to the GUI.
+
+### Fixed
+- **GUI progress/log was completely dead.** The scan thread published `Event`
+  objects onto a queue, but the GUI's drain loop read them as dicts, so the
+  first event raised and killed the loop — leaving the log empty, the progress
+  bar frozen, and the scan looking hung. The drain loop now normalizes both
+  shapes and survives handler errors. (Progress and verbose output are working
+  as originally intended.)
+- **CLI output no longer garbled.** Module lines, findings, and logs are
+  buffered and flushed above the live progress bar instead of interleaving
+  with it, so the bar animates cleanly and results stay readable.
+
+### Added
+- **API keys dialog** in the GUI (toolbar → "API keys"): edit every service and
+  AI key in one place, masked fields, a "?" link that opens the provider's key
+  page, and blank-to-clear semantics. Keys save to `.apikeys`.
+- Scans now log a clear completion summary and switch to the Results tab so a
+  finished scan is unmistakable.
+
 ## [0.2.0] - 2026-10-12
 
 What's new in v0.2.0.

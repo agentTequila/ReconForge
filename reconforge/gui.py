@@ -122,6 +122,8 @@ class ReconForgeApp(ctk.CTk):
         self.ai_var = ctk.BooleanVar(value=False)
         ctk.CTkSwitch(top, text="AI insights", variable=self.ai_var
                       ).pack(side="left", padx=8)
+        ctk.CTkButton(top, text="API keys", width=90, fg_color="gray30",
+                      command=self._open_keys_dialog).pack(side="right", padx=(0, 4))
         self.scan_btn = ctk.CTkButton(top, text="Scan", width=110, command=self.start_scan)
         self.scan_btn.pack(side="right", padx=10)
         ctk.CTkButton(top, text="Light/Dark", width=90, fg_color="gray30",
@@ -280,6 +282,77 @@ class ReconForgeApp(ctk.CTk):
             self.plat_tree.insert("", "end", text=p["name"],
                                   values=(p["category"], p["url"]))
 
+    # ------------------------------------------------------- API keys
+    # Human-friendly label + where to get each key. Order is the display order.
+    _KEY_HELP = (
+        ("SHODAN_API_KEY", "Shodan", "account.shodan.io"),
+        ("VIRUSTOTAL_API_KEY", "VirusTotal", "virustotal.com/gui/my-apikey"),
+        ("HUNTER_API_KEY", "Hunter.io", "hunter.io/api-keys"),
+        ("HIBP_API_KEY", "HaveIBeenPwned", "haveibeenpwned.com/API/Key"),
+        ("EMAILREP_API_KEY", "EmailRep", "emailrep.io"),
+        ("NUMVERIFY_API_KEY", "NumVerify", "numverify.com"),
+    )
+    _AI_KEY_HELP = (
+        ("OPENAI_API_KEY", "OpenAI", "platform.openai.com/api-keys"),
+        ("ANTHROPIC_API_KEY", "Anthropic", "console.anthropic.com"),
+        ("GEMINI_API_KEY", "Google Gemini", "aistudio.google.com/apikey"),
+        ("GROQ_API_KEY", "Groq", "console.groq.com/keys"),
+        ("MISTRAL_API_KEY", "Mistral", "console.mistral.ai/api-keys"),
+        ("OPENROUTER_API_KEY", "OpenRouter", "openrouter.ai/keys"),
+    )
+
+    def _open_keys_dialog(self) -> None:
+        """Modal editor for every service + AI key. Saves to .apikeys."""
+        win = ctk.CTkToplevel(self)
+        win.title("API keys")
+        win.geometry("640x620")
+        win.transient(self)
+        win.grab_set()
+
+        ctk.CTkLabel(win, text="Service API keys",
+                     font=ctk.CTkFont(size=16, weight="bold")
+                     ).pack(anchor="w", padx=14, pady=(14, 2))
+        ctk.CTkLabel(win, text=f"Saved to {config.KEY_FILE_NAME} next to the app. "
+                               "Leave blank to skip that module.",
+                     text_color="gray60").pack(anchor="w", padx=14)
+
+        entries: dict[str, ctk.CTkEntry] = {}
+
+        def add_group(title: str, rows, parent) -> None:
+            ctk.CTkLabel(parent, text=title, font=ctk.CTkFont(weight="bold")
+                         ).pack(anchor="w", padx=8, pady=(10, 2))
+            for key_name, label, where in rows:
+                row = ctk.CTkFrame(parent, fg_color="transparent")
+                row.pack(fill="x", padx=8, pady=2)
+                ctk.CTkLabel(row, text=label, width=150, anchor="w"
+                             ).pack(side="left")
+                entry = ctk.CTkEntry(row, show="*", width=280)
+                entry.insert(0, self.keys.get(key_name, ""))
+                entry.pack(side="left", padx=6)
+                entries[key_name] = entry
+                ctk.CTkButton(row, text="?", width=26, fg_color="gray30",
+                              command=lambda w=where: self._open_url(f"https://{w}")
+                              ).pack(side="left")
+
+        canvas = ctk.CTkScrollableFrame(win)
+        canvas.pack(fill="both", expand=True, padx=10, pady=10)
+        add_group("Recon services", self._KEY_HELP, canvas)
+        add_group("AI providers (bring your own key)", self._AI_KEY_HELP, canvas)
+
+        def save() -> None:
+            updates = {k: e.get().strip() for k, e in entries.items()}
+            config.save_keys(updates)
+            self.keys = config.load_keys()
+            self._refresh_key_status()
+            win.destroy()
+            messagebox.showinfo("ReconForge", "Keys saved.")
+
+        btns = ctk.CTkFrame(win, fg_color="transparent")
+        btns.pack(fill="x", padx=14, pady=(0, 12))
+        ctk.CTkButton(btns, text="Save", width=100, command=save).pack(side="right", padx=4)
+        ctk.CTkButton(btns, text="Cancel", width=100, fg_color="gray30",
+                      command=win.destroy).pack(side="right")
+
     def _refresh_key_status(self) -> None:
         configured = config.key_count(self.keys)
         self.key_label.configure(
@@ -379,17 +452,26 @@ class ReconForgeApp(ctk.CTk):
 
     # ------------------------------------------------------ event drain
     def _poll_events(self) -> None:
-        try:
-            while True:
+        """Drain the scan-thread queue and render. Never dies: an exception
+        here used to silently kill all future progress/log output."""
+        while True:
+            try:
                 event = self.events.get_nowait()
+            except queue.Empty:
+                break
+            try:
                 self._handle_event(event)
-        except queue.Empty:
-            pass
+            except Exception as exc:  # noqa: BLE001 - keep the loop alive
+                self.log_write(f"  ! event error: {exc}")
         self.after(100, self._poll_events)
 
-    def _handle_event(self, event: dict) -> None:
-        etype = event.get("type")
-        data = event.get("data", {})
+    def _handle_event(self, event) -> None:
+        """Accept an Event dataclass or a plain dict and normalize both."""
+        etype = event.type if hasattr(event, "type") else event.get("type")
+        if hasattr(event, "data"):
+            data = event.data or {}
+        else:
+            data = event.get("data", {})
         if etype == "scan_started":
             self.module_total = int(data.get("total_modules") or 0)
             self.module_done = 0
@@ -439,11 +521,22 @@ class ReconForgeApp(ctk.CTk):
                  f"skipped, {self.result.error_count} errors, "
                  f"{len(self.result.findings)} findings")
         self.report_label.configure(text=f"Output: {self.report_dir}")
+        self.log_write("")
+        self.log_write("=" * 60)
+        self.log_write(
+            f"Scan complete: {self.result.ok_count} ok, "
+            f"{self.result.skipped_count} skipped, "
+            f"{self.result.error_count} errors, "
+            f"{len(self.result.findings)} findings"
+        )
+        self.log_write("=" * 60)
         self.log_write("reports: " + ", ".join(Path(f).name for f in data["files"]))
         if self.result.findings:
-            self.tabs.set("Results")
             for finding in self.result.findings:
                 self.tree.insert("", "end", text="FINDING", values=("info", "", finding))
+            self.tabs.set("Results")
+        else:
+            self.tabs.set("Log")
         if self.result.ai:
             for title, body in self.result.ai.items():
                 self.log_write(f"\n=== AI: {title} ===\n{body}")
@@ -526,6 +619,10 @@ class ReconForgeApp(ctk.CTk):
 
         self.ask_entry.delete(0, "end")
         threading.Thread(target=worker, daemon=True).start()
+
+    def _open_url(self, url: str) -> None:
+        import webbrowser
+        webbrowser.open(url)
 
     def _open_folder(self) -> None:
         if not self.report_dir:

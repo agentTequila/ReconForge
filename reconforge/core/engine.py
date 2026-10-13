@@ -85,6 +85,7 @@ def run_scan(
     )
     ctx.emit("scan_started", target=str(target), profile=profile,
              total_modules=len(modules))
+    ctx.log(f"{len(modules)} module(s) queued for {target.value}", level="info")
 
     for meta in modules:
         ctx.emit("module_started", module_id=meta.id, description=meta.description)

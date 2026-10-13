@@ -105,6 +105,10 @@ reconforge keys list                       # what's configured
 reconforge keys set SHODAN_API_KEY abc...  # saved into .apikeys
 ```
 
+In the GUI, use the toolbar button to open the **API keys** dialog — every
+service and AI key is listed with a `?` link to the provider's key page, and
+saved keys are masked. Changes apply to the next scan without restarting.
+
 Precedence: **environment variable → `./.apikeys` → global
 `~/.config/reconforge/.apikeys`** (`%APPDATA%\reconforge\.apikeys` on Windows).
 `.apikeys` is git-ignored, and ReconForge warns if it ever sits inside a git

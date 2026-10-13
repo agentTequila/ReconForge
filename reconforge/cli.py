@@ -211,35 +211,45 @@ def scan(ctx: click.Context, target: str, target_type: str | None, profile: str,
         TextColumn("[cyan]{task.completed}/{task.total}[/]"),
         TimeElapsedColumn(),
         console=console,
+        transient=False,
     )
     task_id: int | None = None
+    buffer: list[str] = []
+
+    def _flush() -> None:
+        """Emit every buffered module line at once, above the live bar."""
+        if not buffer:
+            return
+        progress.console.print("\n".join(buffer))
+        buffer.clear()
 
     def _listener(event):  # noqa: ANN001
         nonlocal task_id
-        if event.type == "log":
-            style = {"info": "dim", "success": "green", "warn": "yellow"}.get(
-                event.data.get("level"), "dim")
-            progress.console.print(f"    [{style}]{event.data['message']}[/]")
-        elif event.type == "scan_started":
+        if event.type == "scan_started":
             total = int(event.data.get("total_modules") or 0)
             task_id = progress.add_task(flavor_for("scan.start"), total=total)
         elif event.type == "module_started":
-            mid = event.data["module_id"]
             if task_id is not None:
-                progress.update(task_id, description=flavor_for(mid))
-            progress.console.print(f"[dim]{mid}[/dim]")
+                progress.update(task_id, description=flavor_for(event.data["module_id"]))
         elif event.type == "module_finished":
             status = event.data["status"]
             style = {"ok": "green", "skipped": "yellow"}.get(status, "red")
             mark = {"ok": "+", "skipped": "~"}.get(status, "x")
             extra = (f" [red]{event.data['error']}[/red]"
                      if event.data.get("error") else "")
-            progress.console.print(
-                f"  [{style}]{mark} {status}[/{style}] "
-                f"{event.data['duration_s']:.1f}s{extra}"
+            buffer.append(
+                f"  {event.data['module_id']:<28} [{style}]{mark} {status:<7}"
+                f"[/{style}] {event.data['duration_s']:5.1f}s "
+                f"[dim]{event.data.get('findings', 0)} finding(s)[/dim]{extra}"
             )
             if task_id is not None:
                 progress.advance(task_id)
+        elif event.type == "finding":
+            buffer.append(f"    [green]>[/green] {event.data['message']}")
+        elif event.type == "log":
+            style = {"info": "dim", "success": "green", "warn": "yellow"}.get(
+                event.data.get("level"), "dim")
+            buffer.append(f"    [{style}]{event.data['message']}[/]")
 
     events.subscribe(_listener)
 
@@ -262,6 +272,7 @@ def scan(ctx: click.Context, target: str, target_type: str | None, profile: str,
             exclude_ids=exclude.split(",") if exclude else None,
         )
     finally:
+        _flush()
         progress.stop()
 
     if ai_enabled:
