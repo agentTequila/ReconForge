@@ -25,17 +25,19 @@
 
 ## Why ReconForge?
 
-- **One engine, two frontends** — `reconforge` CLI (Linux-first, rich tables &
-  a proper startup banner) and `reconforge-gui` (Windows-first, CustomTkinter).
-  Both work everywhere; both share identical scan logic.
-- **Safe by default** — passive profile out of the box; active modules require
-  an explicit flag/confirmation.
-- **It feels alive** — every scan shows a live progress bar with flavor text
-  ("sifting through certificate ashes...") in both frontends.
-- **Keys optional** — every key-less module runs with zero configuration.
-  API keys unlock extras; the AI features accept *your own* keys (BYOK), or run
-  fully local via [Ollama](https://ollama.com).
-- **Extensible** — a new capability is one file with one decorator. See
+- **One engine, two frontends.** `reconforge` is the CLI: Linux-first, rich
+  tables, a real startup banner. `reconforge-gui` is the Windows-first
+  CustomTkinter app. Both run on Windows, Linux, and macOS and share the same
+  scan logic, so a target comes back the same either way.
+- **Passive profile out of the box.** Active modules (ports, directories, SMTP)
+  stay behind an explicit flag and a confirmation prompt.
+- **It shows its work.** A progress bar and flavor text ("sifting through
+  certificate ashes...") stream in both frontends while modules run.
+- **No keys needed to start.** Every key-less module runs with zero setup. Add
+  API keys when you have them to run more, and point the AI features at your
+  own key (BYOK) or a local [Ollama](https://ollama.com) model if you'd rather
+  nothing left your machine.
+- **A new capability is one file with one decorator.** See
   [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Coverage
@@ -83,9 +85,10 @@ reconforge platforms             # every platform/source ReconForge touches
 reconforge-gui
 ```
 
-Pick a target, toggle Passive/Active, watch the live log, inspect per-module
-JSON, export reports, and run AI insights from the bottom bar. The window uses
-the bundled radar icon (`assets/icon.ico`).
+Pick a target, choose Passive or Active, hit Scan. The log streams while it
+runs, each module's raw JSON is readable as it lands, and reports are written
+automatically (open them from the Report tab). AI insights run from the bottom
+bar. Window icon comes from the bundled `assets/icon.ico`.
 
 **Active scans** (ports, directories, SMTP) need explicit consent:
 
@@ -98,14 +101,14 @@ reconforge scan example.com --active -y     # scripted/CI use
 
 On first run ReconForge generates a hidden `.apikeys` template in your working
 directory (Hidden attribute on Windows, `0600` on Linux/macOS). Fill in what
-you have — empty keys simply skip those modules:
+you have. Empty keys simply skip those modules:
 
 ```bash
 reconforge keys list                       # what's configured
 reconforge keys set SHODAN_API_KEY abc...  # saved into .apikeys
 ```
 
-In the GUI, use the toolbar button to open the **API keys** dialog — every
+In the GUI, use the toolbar button to open the **API keys** dialog. Every
 service and AI key is listed with a `?` link to the provider's key page, and
 saved keys are masked. Changes apply to the next scan without restarting.
 
@@ -115,12 +118,12 @@ Precedence: **environment variable → `./.apikeys` → global
 repo without being ignored. **Never commit your keys.**
 
 Supported keys: Shodan, VirusTotal, Hunter.io, Have I Been Pwned, EmailRep,
-NumVerify — plus AI keys below.
+NumVerify, plus the AI keys below.
 
 ## AI (bring your own key)
 
 AI features are **off unless you configure a provider**. Only scan results are
-sent — never your keys — and `--redact` hashes emails/phones/IPs first.
+sent (never your keys), and `--redact` hashes emails/phones/IPs first.
 
 | Provider | Key | Local? |
 |----------|-----|--------|
@@ -153,13 +156,13 @@ Portable builds ship on the
 
 | Asset | What it is |
 |-------|------------|
-| `ReconForge-v*-win64.exe` | GUI — download and double-click, no installer |
+| `ReconForge-v*-win64.exe` | GUI: download and double-click, no installer |
 | `reconforge-cli-v*-win64.exe` | the full CLI in one file |
 | `SHA256SUMS.txt` | verify your download (`Get-FileHash -Algorithm SHA256`) |
 
 Portable means no installer: `.apikeys` and `reconforge_output\` are created
 **next to the exe** (it runs fine from a USB stick). Windows SmartScreen may
-flag unsigned executables — that's normal for open-source builds; verify the
+flag unsigned executables. That's normal for open-source builds; verify the
 SHA-256 against `SHA256SUMS.txt` and run it yourself.
 
 Prefer building from source? It's one command:
@@ -184,7 +187,7 @@ reconforge/
 
 Modules register with a decorator and return `(data, findings)`. The engine
 enforces per-module timeouts, isolates failures, skips missing-key modules, and
-emits events the CLI/GUI render — the core never imports UI code.
+emits events the CLI/GUI render. The core never imports UI code.
 
 ## Development
 
@@ -202,9 +205,9 @@ New platform to add? Append an entry to `reconforge/data/platforms.json`
 ReconForge is intended for **authorized security testing, incident response,
 defensive research, and education**. You are responsible for complying with all
 applicable laws and terms of service of third-party sources. Passive modules
-query public data; active modules interact with live systems — obtain written
+query public data; active modules interact with live systems. Obtain written
 permission before scanning assets you do not own.
 
 ## License
 
-[MIT](LICENSE) — contributions welcome.
+[MIT](LICENSE). Contributions welcome.

@@ -1,7 +1,7 @@
 # Changelog
 
-All notable changes to ReconForge are documented here.
-Format: [Keep a Changelog](https://keepachangelog.com/).
+All notable changes to ReconForge, newest first, in
+[Keep a Changelog](https://keepachangelog.com/) format.
 
 ## [0.2.1] - 2026-10-13
 
@@ -11,10 +11,9 @@ this release makes scan progress real and adds proper key management to the GUI.
 ### Fixed
 - **GUI progress/log was completely dead.** The scan thread published `Event`
   objects onto a queue, but the GUI's drain loop read them as dicts, so the
-  first event raised and killed the loop — leaving the log empty, the progress
-  bar frozen, and the scan looking hung. The drain loop now normalizes both
-  shapes and survives handler errors. (Progress and verbose output are working
-  as originally intended.)
+  first event raised and killed the loop. The log stayed empty, the progress
+  bar sat frozen, and the scan looked hung. The drain loop now normalizes both
+  shapes and survives handler errors.
 - **CLI output no longer garbled.** Module lines, findings, and logs are
   buffered and flushed above the live progress bar instead of interleaving
   with it, so the bar animates cleanly and results stay readable.
@@ -23,12 +22,10 @@ this release makes scan progress real and adds proper key management to the GUI.
 - **API keys dialog** in the GUI (toolbar → "API keys"): edit every service and
   AI key in one place, masked fields, a "?" link that opens the provider's key
   page, and blank-to-clear semantics. Keys save to `.apikeys`.
-- Scans now log a clear completion summary and switch to the Results tab so a
-  finished scan is unmistakable.
+- Scans now log a completion summary and switch to the Results tab, so you can
+  tell when one is actually done.
 
 ## [0.2.0] - 2026-10-12
-
-What's new in v0.2.0.
 
 ### Added
 - **Live scan progress**: the CLI shows a rich progress bar (flavor text +
@@ -63,8 +60,9 @@ Initial public release.
   results inspector, platforms browser, AI panel, report actions, radar icon.
 - 64+ platform dataset (`data/platforms.json`) with per-site detection logic,
   community-editable without code changes.
-- BYOK AI analysis: OpenAI, Anthropic, Gemini, Groq, Mistral, OpenRouter,
-  and local Ollama — summarize, correlate, ask, suggest; optional PII redaction.
+- BYOK AI analysis: OpenAI, Anthropic, Gemini, Groq, Mistral, OpenRouter, and
+  local Ollama, for summaries, risk correlation, questions, and next steps;
+  optional PII redaction.
 - Hidden `.apikeys` file (generated on first run; Hidden attribute on Windows,
   `0600` on POSIX) with env-var override and legacy `.env` fallback.
 - Reports: `full_results.json` (schema v1), `REPORT.md`, `report.html`,
@@ -78,5 +76,5 @@ Initial public release.
 ### Fixed
 
 - Windows application icon (Explorer, taskbar, Alt+Tab) now renders the dark
-  brand design at every size — the ICO uses all-PNG entries because Pillow's
-  BMP frames lost the background in shell views.
+  brand design at every size. The ICO uses all-PNG entries because Pillow's BMP
+  frames lost the background in shell views.

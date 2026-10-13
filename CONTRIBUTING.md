@@ -55,7 +55,7 @@ def run(target: Target, ctx: ScanContext):
 
 Rules:
 
-- **Never raise past your module** — the engine catches exceptions, but clean
+- **Never raise past your module.** The engine catches exceptions, but clean
   handling produces better `data`.
 - Use `ctx.http()` (UA, proxy support, cache, rate limiting) instead of bare
   `requests`.
@@ -76,7 +76,7 @@ ruff check .
 ## Pull requests
 
 1. Fork and branch from `main`.
-2. Keep PRs focused — one feature/fix per PR.
+2. Keep PRs focused: one feature/fix per PR.
 3. Describe *what* changed and *why*; link issues.
 4. Ensure `pytest` and `ruff check .` pass.
 5. Update README/docs if you change user-facing behavior.
